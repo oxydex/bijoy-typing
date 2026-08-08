@@ -1,0 +1,553 @@
+* {
+  -webkit-user-select: none !important;
+  -moz-user-select: none !important;
+  -ms-user-select: none !important;
+  user-select: none !important;
+  -webkit-user-drag: none !important;
+}
+
+/* শুধুমাত্র ইনপুট বক্স সিলেক্ট করতে দেবে */
+input, textarea {
+  -webkit-user-select: text !important;
+  -moz-user-select: text !important;
+  -ms-user-select: text !important;
+  user-select: text !important;
+}
+
+body {
+  margin:0;
+  background: radial-gradient(circle at top, #1f2937, #111827);
+  color:#d1d5db;
+  font-family: monospace;
+
+scrollbar-width: none; /* Firefox এর জন্য */
+  -ms-overflow-style: none; /* IE এবং Edge এর জন্য */
+}
+
+body::-webkit-scrollbar {
+  display: none; /* Chrome, Safari-এর জন্য */
+}
+
+/* পুরো পেজের জন্য (HTML এবং Body উভয়ই) */
+html, body {
+  scrollbar-width: none !important; /* Firefox */
+  -ms-overflow-style: none !important; /* IE and Edge */
+}
+
+/* Chrome, Safari, and Opera-এর জন্য */
+html::-webkit-scrollbar, 
+body::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+}
+
+
+.container {
+  max-width:900px;
+  margin:auto;
+  padding:30px;
+  text-align:center;
+}
+
+/* inputs */
+textarea, .input {
+  width:100%;
+  box-sizing: border-box;
+  background:#2a2d37;
+  color:#e5e7eb;
+  border:1px solid #3a3f4b;
+  padding:10px;
+  font-size:18px;
+  border-radius:6px;
+  resize:none;
+}
+
+textarea::-webkit-scrollbar {
+  display:none;
+}
+textarea {
+  scrollbar-width:none;
+}
+
+.input {
+  margin: 5px 0;
+  width:100%;
+  min-height:60px;
+  max-height:120px;   /* 🔥 limit growth */
+  overflow-y:auto;
+}
+
+/* buttons */
+button {
+  margin:5px;
+  padding:8px 15px;
+  background:#4f46e5;
+  border:none;
+  color:#fff;
+  cursor:pointer;
+  border-radius:6px;
+}
+
+button:hover {
+  background:#6366f1;
+}
+
+/* stats */
+.stats {
+  display:flex;
+  justify-content:center;
+  gap:30px;
+  margin:20px 0;
+  color:#9ca3af;
+}
+
+/* typing area (3 line view) */
+.text-display::-webkit-scrollbar {
+  display:none;
+}
+.text-display {
+  scrollbar-width:none;
+  background:#2a2d37;
+  padding:20px;
+  border-radius:10px;
+  font-size:24px;
+  line-height:1.8;
+  text-align:left;
+  color:#9ca3af;
+
+  height:70px;        /* 🔥 fixed height */
+  overflow-y:auto;     /* scroll inside */
+
+}
+
+/* inner scroll container */
+.text-inner {
+  transition: transform 0.3s ease;
+}
+
+/* typing colors */
+.correct { color:#22c55e; }
+.wrong { color:#ef4444; }
+.current { color:#ffffff; text-decoration:underline; }
+
+/* progress */
+.progress {
+  height:6px;
+  background:#3a3f4b;
+  margin: 5px 0;
+  border-radius:5px;
+}
+.progress-bar {
+  height:100%;
+  width:0%;
+  background:#22c55e;
+}
+
+
+
+/* keyboard */
+.keyboard {
+  position:sticky;
+   margin: 1px 0;
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+}
+
+.row {
+  display:flex;
+  justify-content:center;
+  gap:6px;
+}
+
+.key {
+  background:#2a2d37;
+  border:1px solid #3a3f4b;
+  position: relative;
+  border-radius:10px;
+  min-width:55px;
+  height:60px;
+
+  padding:6px;
+  border-radius:12px;
+
+  background:rgba(255,255,255,0.03);
+  backdrop-filter: blur(6px);
+  box-sizing:border-box;
+  box-shadow:
+    0 4px 10px rgba(0,0,0,0.4),
+    inset 0 1px 0 rgba(255,255,255,0.05);
+  
+transition:all 0.1s ease;
+
+}
+
+/* top-right (shift char) */
+.key .shift {
+  top: 5px;
+  right: 6px;
+  font-size:15px;
+  color:#9ca3af;
+  position: absolute;
+}
+
+/* middle (main bangla) */
+.key .main {
+  top: 60%;
+  left: 45%;
+  position: absolute;
+  transform: translate(-50%, -50%);
+  font-size:18px;
+  color:#60a5fa;
+  font-weight:600;
+}
+
+
+/* top-left (english) */
+.key .en {
+  top: 5px;
+  left: 6px; 
+  font-size:15px;
+  color:#9ca3af;
+  position: absolute;
+}
+
+/* hover glow */
+.key:hover {
+  border-color:#3b82f6;
+  box-shadow:
+    0 0 10px rgba(59,130,246,0.3),
+    0 4px 12px rgba(0,0,0,0.5);
+}
+
+/* active press */
+.key.active {
+  transform: translateY(3px) scale(0.97);
+  background:rgba(59,130,246,0.2);
+  box-shadow:
+    inset 0 2px 6px rgba(0,0,0,0.6);
+}
+
+
+.key.wide { min-width:90px; }
+.key.xwide { min-width:120px; }
+.key.space { min-width:360px; }
+
+.key-label {
+  font-size: 12px;
+  color: #e5e7eb;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  width: 100%;
+  font-weight: 500;
+  letter-spacing: 0.5px;
+}
+
+
+/* Sidebar scrollbar hide করার জন্য */
+#lessonCards::-webkit-scrollbar {
+    display: none; /* Chrome, Safari এবং Opera-এর জন্য */
+}
+
+#lessonCards {
+    -ms-overflow-style: none;  /* IE এবং Edge-এর জন্য */
+    scrollbar-width: none;  /* Firefox-এর জন্য */
+}
+
+
+
+/* Minimalist & Ultra-Modern Stats */
+.premium-stats-container {
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    background: rgba(255, 255, 255, 0.02);
+    padding: 25px;
+    border-radius: 20px;
+    margin: 5px 0;
+    backdrop-filter: blur(10px);
+}
+
+.stat-item {
+    text-align: center;
+    position: relative;
+}
+
+.stat-label {
+    display: block;
+    font-size: 13px;
+    color: #64748b; /* Slate color */
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    margin-bottom: 8px;
+    font-weight: 600;
+}
+
+.stat-value {
+    font-size: 32px;
+    font-weight: 700;
+    font-family: 'JetBrains Mono', monospace; /* টাইপিং ভাইব দেওয়ার জন্য */
+    transition: all 0.3s ease;
+}
+
+/* আইডেন্টিটি কালারস - নিওন টাচ */
+#accuracy { color: #10b981; } /* Green */
+#wpm { color: #6366f1; }      /* Indigo */
+#mistakeCount { color: #f43f5e; } /* Rose */
+#time { color: #f59e0b; }     /* Amber */
+
+/* হোভার করলে হালকা গ্লো হবে */
+.stat-item:hover .stat-value {
+    text-shadow: 0 0 15px currentColor;
+    transform: scale(1.1);
+}
+
+/* ডিভাইডার */
+.stat-item:not(:last-child)::after {
+    content: "";
+    position: absolute;
+    right: -40%;
+    top: 20%;
+    height: 60%;
+    width: 1px;
+    background: rgba(255, 255, 255, 0.1);
+}
+
+@media (max-width: 600px) {
+    .premium-stats-container {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 20px;
+    }
+    .stat-item::after { display: none; }
+}
+
+
+/* --- Compact Premium Control Grid --- */
+.control-grid {
+    display: flex !important;
+    justify-content: space-around;
+    align-items: center;
+    background: rgba(255, 255, 255, 0.02) !important;
+    border: 1px solid rgba(255, 255, 255, 0.05) !important;
+    backdrop-filter: blur(10px);
+    padding: 8px 20px !important;
+    border-radius: 20px !important;
+    margin: 5px 0 !important;
+    gap: 15px;
+}
+.control-card {
+    background: none !important;
+    border: none !important;
+    padding: 0 !important;
+    margin: 0 !important; 
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+min-height: auto !important;
+}
+
+.control-card:hover {
+    background: rgba(30, 41, 59, 0.4);
+    transform: translateY(-2px);
+}
+
+.control-label {
+font-size: 9px !important;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 1.2px;
+    margin-bottom: 2px !important;
+    font-weight: 600;
+}
+
+.control-content {
+    display: flex;
+    align-items: center;
+    gap: 5px; /* এলিমেন্টগুলোর মাঝের দূরত্ব কমানো হয়েছে */
+    font-family: 'JetBrains Mono', monospace;
+}
+
+
+/* --- All Main Buttons Sync (Size & Weight) --- */
+.control-content button, 
+.inline-input input {
+background: none !important;
+    border: none !important;
+    color: #94a3b8 !important;
+    font-family: 'JetBrains Mono', monospace !important;
+    font-weight: 700 !important;
+    font-size: 14px !important;
+    cursor: pointer;
+    padding: 2px 5px !important;
+    transition: all 0.2s;
+
+    font-size: 15px !important; /* সবগুলোর সাইজ এখন এক */
+    font-weight: 700 !important;
+    font-family: 'JetBrains Mono', monospace !important;
+cursor: pointer;
+    padding: 2px 5px !important;
+    transition: all 0.2s;
+}
+
+.control-content button:not(.action-btn):hover {
+    color: #f59e0b !important;
+    text-shadow: 0 0 8px rgba(245, 158, 11, 0.4);
+}
+/* --- Normal Hover --- */
+.control-content button {
+    background: none;
+    border: none;
+    color: #64748b;
+   
+}
+.action-btn {
+    background: none !important;
+    border: none !important;
+    font-size: 14px !important;
+    padding: 2px 8px !important;
+}
+
+
+
+.control-content button:hover {
+    opacity: 1;
+    color: #f1f5f9;
+
+}
+
+/* --- Start & Restart Glow (Fix) --- */
+.start-btn { color: #10b981 !important; }
+.restart-btn { color: #f43f5e !important; }
+
+.start-btn:hover {
+    color: #34d399 !important;
+    text-shadow: 0 0 15px rgba(16, 185, 129, 0.6); /* নিওন গ্লো */
+    transform: translateY(-2px);
+}
+
+.restart-btn:hover {
+    color: #fb7185 !important;
+    text-shadow: 0 0 15px rgba(244, 63, 94, 0.6); /* নিওন গ্লো */
+    transform: translateY(-2px);
+}
+
+/* --- Inline Input Sync --- */
+.inline-input {
+    display: flex;
+    align-items: center;
+    background: rgba(27,36,53);
+    padding: 2px 12px;
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.inline-input input {
+    width: 70px;
+    background: none;
+    border: none;
+    color: #f59e0b !important; /* Timer Amber */
+    outline: none;
+    text-align: left;
+    padding: 0;
+}
+
+.inline-input input::placeholder {
+    color: #475569;
+    font-size: 14px;
+    font-weight: normal;
+}
+
+.set-link {
+    font-size: 14px !important; /* 'set' ছোট থাকাই প্রিমিয়াম লাগে, তবে বোল্ড করা হয়েছে */
+    color: #6366f1 !important;
+    margin-left: 10px;
+    text-transform: lowercase;
+}
+
+.set-link:hover {
+    text-shadow: 0 0 10px rgba(99, 102, 241, 0.5);
+}
+
+.vertical-line {
+    width: 1.5px;
+    height: 25px;
+    background: rgba(255, 255, 255, 0.1);
+    margin: 0 5px;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .control-grid { grid-template-columns: 1fr; }
+}
+
+
+
+/* Next Key Guide Styles */
+.key.next-guide {
+    border-color: #10b981;
+    box-shadow: 0 0 15px rgba(16, 185, 129, 0.4), inset 0 0 10px rgba(16, 185, 129, 0.2);
+    animation: pulse-guide 1.5s infinite;
+}
+.key.shift-guide {
+    border-color: #f59e0b;
+    box-shadow: 0 0 15px rgba(245, 158, 11, 0.4);
+}
+@keyframes pulse-guide {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+    100% { transform: scale(1); }
+}
+
+
+
+/* Previous Result Bar Modern Look */
+/* Previous Result Bar - Color Match Update */
+#lastSession {
+    background: rgba(255, 255, 255, 0.02) !important;
+    border: 1px solid rgba(255, 255, 255, 0.05) !important;
+    backdrop-filter: blur(10px);
+    display: none; /* JS will toggle flex */
+    justify-content: space-around;
+    padding: 12px 20px !important;
+    border-radius: 20px !important;
+    margin: 5px 0;
+}
+
+.last-label {
+    font-size: 10px !important;
+    color: #64748b; /* Stat label এর মতো Slate color */
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    margin-bottom: 4px;
+    font-weight: 600;
+}
+
+
+.last-val {
+    font-size: 18px !important;
+    font-weight: 700;
+    font-family: 'JetBrains Mono', monospace;
+   
+}
+
+/* স্পেসিফিক কালার ম্যাচিং */
+.last-wpm { color: #6366f1; }      /* Speed - Indigo */
+.last-acc { color: #10b981; }      /* Accuracy - Green */
+.last-mistake { color: #f43f5e; }  /* Mistakes - Rose */
+.last-keys { color: #3b82f6; }     /* Correct Keys - Blue */
+
+/* Chrome, Safari, Edge, Opera-এর জন্য ইনপুট স্পিনার লুকানো */
+input[type="number"]::-webkit-inner-spin-button, 
+input[type="number"]::-webkit-outer-spin-button { 
+  -webkit-appearance: none; 
+  margin: 0; 
+}
+
+/* Firefox-এর জন্য ইনপুট স্পিনার লুকানো */
+input[type="number"] {
+  -moz-appearance: textfield;
+}
