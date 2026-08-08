@@ -119,6 +119,1270 @@
     </div>
 </div>
 
-<script src="script.js"></script>
+<script>
+    // =========================================================
+// 1. কীবোর্ড শর্টকাট ও রাইট ক্লিক ব্লক
+// =========================================================
+document.addEventListener('contextmenu', e => e.preventDefault());
+document.addEventListener('keydown', function(e) {
+    if (e.keyCode === 123 || 
+        (e.ctrlKey && e.shiftKey && (e.keyCode === 73 || e.keyCode === 74 || e.keyCode === 67)) || 
+        (e.ctrlKey && e.keyCode === 85) || 
+        (e.ctrlKey && e.keyCode === 83)) {
+        e.preventDefault();
+        return false;
+    }
+});
+
+// =========================================================
+// 2. ৩-ডট মেনু দিয়ে Inspect খুললে স্ক্রিন খালি ও লুপ তৈরি করার ট্রিক
+// =========================================================
+
+// (ক) উইন্ডো সাইজ ডিটেক্টর (পাশে বা নিচে Inspect খুললেই স্ক্রিন খালি হয়ে যাবে)
+setInterval(function() {
+    const widthThreshold = window.outerWidth - window.innerWidth > 160;
+    const heightThreshold = window.outerHeight - window.innerHeight > 160;
+    
+    if (widthThreshold || heightThreshold) {
+        document.body.innerHTML = '<div style="background:#111827; color:red; height:100vh; display:flex; align-items:center; justify-content:center; font-family:sans-serif;"><h1>Access Denied! Developer tools are disabled.</h1></div>';
+    }
+}, 300);
+
+// (খ) কনসোল ট্র্যাপ (Console Panel খুললেই পেজ রিলোড বা বন্ধ হবে)
+const element = new Image();
+Object.defineProperty(element, 'id', {
+    get: function () {
+        document.body.innerHTML = '<h1 style="color:red;text-align:center;">Access Denied!</h1>';
+        window.location.href = "about:blank"; // ৩-ডট দিয়ে খুললে সাদা পেজে পাঠাবে
+    }
+});
+setInterval(function() {
+    console.log('%c', element);
+    console.clear();
+}, 500);
+
+// (গ) ইনফিনিট ডাইনামিক ডিবাগার (ব্রাউজার ট্যাব হ্যাঙ্গ করে দেবে)
+(function() {
+    function block() {
+        setInterval(function() {
+            (function() {
+                return false;
+            })['constructor']('debugger')['call']('action');
+        }, 50);
+    }
+    try { block(); } catch (e) {}
+})();
+
+// 2. Anti-Debugging (Inspect Element খুললেই ওয়েবসাইট কন্টেন্ট গায়েব হয়ে যাবে)
+setInterval(function() {
+    var startTime = performance.now();
+    debugger; // Inspect ওপেন থাকলে এখানে আটকে যাবে
+    var endTime = performance.now();
+    
+    // কেউ যদি Inspect খুলতে পারে, তাহলে ৫ মি.সে এর বেশি সময় লাগবে এবং পেজ ফাঁকা হয়ে যাবে
+    if (endTime - startTime > 100) {
+        document.body.innerHTML = '<div style="text-align:center; margin-top:20%; font-size:24px; color:red; font-family:sans-serif;"><h1>Access Denied!</h1><p>সিকিউরিটি কারনেই ওয়েবসাইটটির ইনসপেক্ট মোড বন্ধ রাখা হয়েছে।</p></div>';
+    }
+}, 100);
+
+
+
+
+// anti-debug system: Inspect Element খুললেই ওয়েবসাইট আটকে যাবে
+setInterval(function() {
+    var startTime = performance.now();
+    debugger; // Inspect tool খোলার সাথে সাথে এখানে আটকে যাবে
+    var endTime = performance.now();
+    if (endTime - startTime > 100) {
+        window.location.reload(); // Inspect খুললে পেজ অটো রিলোড হবে
+    }
+}, 100);
+
+// বাকি টাইপিংয়ের JavaScript কোড নিচে থাকবে...
+
+
+
+function splitGraphemes(str) {
+    if (!str) return [];
+    const normalized = str.normalize("NFC").replace(/[\u200B-\u200D\uFEFF]/g, "");
+    return Array.from(new Intl.Segmenter('bn', { granularity: 'grapheme' }).segment(normalized), s => s.segment);
+}
+
+
+
+
+
+
+let target = "";
+let startTime = null;
+let timer = null;
+let mistakes = 0;
+let correctKeyCount = 0; // মোট কতবার সঠিক কি টেপা হয়েছে তার হিসাব
+let permanentMistakeCount = 0;
+let totalTime = 0;
+let remainingTime = 0;
+let testEnded = false;
+let currentLessonTitle = ""; // লেসন ট্র্যাক করার জন্য
+
+
+let msgIndex = 0;
+let goodMsgIndex = 0; // গুড মেসেজের সিরিয়াল ট্র্যাক করার জন্য
+
+const funnyMessages = [
+    "keyboard বলছে: 'আমায় একটু বুঝে চাপো!' 😭",
+    "এইভাবে চললে WPM না, WTF হবে 😅",
+    "এত ভুল করলে keyboard-ও লজ্জা পাচ্ছে 😭",
+    "টাইপ করছো নাকি lottery মারছো? 🎰😆",
+    "একটু ধীরে… না হলে অক্ষরগুলো protest করবে 😤",
+    "brain lag করছে নাকি internet? 🧠📶😆",
+    "fast তো আছো, but right কই? 🤔"
+];
+
+const goodMessages = [
+    
+"keyboard বলছে: “আমি আর পারছি না ভাই!” 😵‍💫",
+"এই স্পিডে keyboard-ই বলছে: “ভাই একটু ধীরে!” 😳⌨️",
+    "typing না, machine gun চালাইতেছো নাকি? 🔫😂",
+    "এত smooth টাইপিং দেখে WiFi-ও jealous 😏📶",
+    "boss, আজ তুমি Fire 💥😎",
+    "ভুলগুলোর আজ  জর হইছে  🥵😴"
+];
+
+
+
+
+let isShift = false;
+document.addEventListener("keydown", function(e){
+  if(e.key === "Shift") isShift = true;
+});
+document.addEventListener("keyup", function(e){
+  if(e.key === "Shift") isShift = false;
+});
+
+function normalizeText(text){
+  return text.normalize("NFC").replace(/\u200c/g,"").replace(/\u200d/g,"");
+}
+
+// auto expand
+document.getElementById("inputBox").addEventListener("input", function(){
+ 
+});
+ 
+// keyboard layout
+// --- BIJOY MAP & DATA ---
+    const BIJOY_MAP = {
+        '`': '“', '1': '১', '2': '২', '3': '৩', '4': '৪', '5': '৫', '6': '৬', '7': '৭', '8': '৮', '9': '৯', '0': '০', '-': '-', '=': '=',
+        'q': 'ঙ', 'w': 'য', 'e': 'ড', 'r': 'প', 't': 'ট', 'y': 'চ', 'u': 'জ', 'i': 'হ', 'o': 'গ', 'p': 'ড়', '[': '[', ']': ']', 
+        'a': 'ৃ', 's': 'ু', 'd': 'ি', 'f': 'া', 'g': '্', 'h': 'ব', 'j': 'ক', 'k': 'ত', 'l': 'দ', ';': ';', "'": "'", '\\': 'ৎ',
+        'z': '্র', 'x': 'ও', 'c': 'ে', 'v': 'র', 'b': 'ন', 'n': 'স', 'm': 'ম', ',': ',', '.': '.', '/': '/', 
+    };
+
+    const BIJOY_SHIFT_MAP = {
+	 '`': '“', '1': '!', '2': '৥', '3': '#', '4': '৳', '5': '%', '6': '঳', '7': 'ঁ', '8': '*', '9': '(', '0': ')', '-': 'Ñ', '=': '+',
+        'q': 'ং', 'w': 'য়', 'e': 'ঢ', 'r': 'ফ', 't': 'ঠ', 'y': 'ছ', 'u': 'ঝ', 'i': 'ঞ', 'o': 'ঘ', 'p': 'ঢ়', '[': '{', ']': '}',
+        'a': 'র্', 's': 'ূ', 'd': 'ী', 'f': 'অ', 'g': '।', 'h': 'ভ', 'j': 'খ', 'k': 'থ', 'l': 'ধ', ';': ':', "'": '”', '\\': 'ঃ',
+        'z': '্য', 'x': 'ৗ', 'c': 'ৈ', 'v': 'ল', 'b': 'ণ', 'n': 'ষ', 'm': 'শ', ',': '<', '.': '>', '/': '?'
+    };
+
+const KEYBOARD_DATA = {
+        'q': { shift: 'ং', normal: 'ঙ' }, 'w': { shift: 'য়', normal: 'য' }, 'e': { shift: 'ঢ', normal: 'ড' },
+        'r': { shift: 'ফ', normal: 'প' }, 't': { shift: 'ঠ', normal: 'ট' }, 'y': { shift: 'ছ', normal: 'চ' },
+        'u': { shift: 'ঝ', normal: 'জ' }, 'i': { shift: 'ঞ', normal: 'হ' }, 'o': { shift: 'ঘ', normal: 'গ' },
+        'p': { shift: 'ঢ়', normal: 'ড়' }, '[': { shift: '{', normal: '[' }, ']': { shift: '}', normal: ']' },
+        'a': { shift: 'র্', normal: 'ৃ' }, 's': { shift: 'ূ', normal: 'ু' }, 'd': { shift: 'ী', normal: 'ি' },
+        'f': { shift: 'অ', normal: 'া' }, 'g': { shift: '।', normal: '্' }, 'h': { shift: 'ভ', normal: 'ব' },
+        'j': { shift: 'খ', normal: 'ক' }, 'k': { shift: 'থ', normal: 'ত' }, 'l': { shift: 'ধ', normal: 'দ' },
+        ';': { shift: ':', normal: ';' }, "'": { shift: '”', normal: '’' }, '\\': { shift: 'ঃ', normal: 'ৎ' },
+        'z': { shift: '্য', normal: '্র' }, 'x': { shift: 'ৗ', normal: 'ও' }, 'c': { shift: 'ৈ', normal: 'ে' },
+        'v': { shift: 'ল', normal: 'র' }, 'b': { shift: 'ণ', normal: 'ন' }, 'n': { shift: 'ষ', normal: 'স' },
+        'm': { shift: 'শ', normal: 'ম' }, ',': { shift: '<', normal: ',' }, '.': { shift: '>', normal: '.' },
+        '/': { shift: '?', normal: '/' }, '1': { shift: '!', normal: '১' }, '2': { shift: '৥', normal: '২' }, 
+        '3': { shift: '#', normal: '৩' }, '4': { shift: '৳', normal: '৪' }, '5': { shift: '%', normal: '৫' }, 
+        '6': { shift: '঳', normal: '৬' }, '7': { shift: 'ঁ', normal: '৭' }, '8': { shift: '*', normal: '৮' }, 
+        '9': { shift: '(', normal: '৯' }, '0': { shift: ')', normal: '০' }, '-': { shift: 'Ñ', normal: '-' }, 
+        '=': { shift: '+', normal: '=' }, '`': { normal: 'ঁ', shift: '~' }
+    };
+
+const KEYBOARD_ROWS = [
+ ['`','1','2','3','4','5','6','7','8','9','0','-','=','Backspace'],
+ ['Tab','q','w','e','r','t','y','u','i','o','p','[',']',''],
+ ['Caps','a','s','d','f','g','h','j','k','l',';',"'",'\\','Enter'],
+ ['Shift','z','x','c','v','b','n','m',',','.','/','Shift'],
+ ['Ctrl','window','Alt','Space','Alt','FN','Menu','Ctrl']
+];
+
+
+const NESTED_LESSONS = [
+  { 
+        id: 'home_row_group', 
+        title: 'বাংলা বর্ণমালা ', 
+        level: 'Beginner',
+        description: ' কিবোর্ড অনুশীলনের নিয়ম',
+        items: [
+            { title: 'স্বরবর্ণ (Vowels)', text: 'অ আ ই ঈ উ ঊ ঋ এ ঐ ও ঔ', },
+            { title: 'ব্যঞ্জনবর্ণ ও সংখ্যা', text: 'ক খ গ ঘ ঙ চ ছ জ ঝ ঞ ট ঠ ড ঢ ণ ত থ দ ধ ন প ফ ব ভ ম য র ল শ ষ স হ ড় ঢ় য় ৎ ং ঃ ঁ', }
+        ]
+    },
+
+
+
+
+
+ { 
+        id: 'home_row_group', 
+        title: 'বাংলা বর্ণমালা প্র্যাকটিস  ', 
+        level: 'Beginner',
+        description: '',
+        items: [
+            { title: 'ত ন র স ফলকের অভ্যাস', text: 'ততত ননন ততত ননন ততত নতন তনত নতন তনত নতন ররর সসস ররর সসস ররর সসস সসস তনত রসন তনত সরন নতন সরস নতন তনর রসন তনস নত তন সর তন সর রস নত রস নত নত রস সর নত সর নত তন রস নত সরতন নত রস নত রস নত রস রস রতন নতন রতন নতন রতন রতন নতন নতন তত তত তন নতর রস নত সর নত সর তত তন তত তন নত সর নত তন রস নত রস নত সর তর সর তর রতন নতন রত তত সরস সরস সরস সরস ননন রতন ররর ররর ননন ররর সরস সরস সরস সরস রতন নতন রতন সরতন সরতন সরতন সরতন তনরস তনরস তনরস তনরস তনরস তনরস সরতন সরতন তনরস সরতন তনরস',
+        description: 'ত ন র স  কি-গুলোর প্র্যাকটিস', },
+
+            { title: 'অ দ া  ে ফলকের অভ্যাস', text: 'তঅত তঅত নদন নদন তঅত নদন তঅত নদন তঅত নদন নদন তঅত নদতঅ তানের তানের তানের নেতা নেতা নেতা নেতা সেতার সেতার সেতার সেতার তানসেন তানসেন তানসেন সেতার সেতার সেতার রাতের রাতের রাতের রাতের তানসেন সেতার আন নেতা আন আতর তানসেন সেতার আন নেতা আতর আতর আতর দান দান আদত আদত আদনান আদনান অনতর অনতর নর সত নর সত নর সত নর সত নর সত নর সত নর সত নর সত নর তঅ নদ তঅ তঅ নদ তঅ তঅ', },
+
+            { title: 'য় র ঢ ট ফলকের অভ্যাস  ', text: 'রয় রয় তঢ দছ তঢ দছ ঢত ছদ ঢত ছদ তট তট টন নট ভট টয় টন নট তট টয় রায় রায় আয় আয় রায় ছানা ছানা ঢের ঢের ঢের দাতা দাতা সাদা সাদা ছায়া ছায়া আসে আসে ছটা ছটা ছটা ছাদ ছাদ ছাদ আছি রীতি নদ দিদি রীতি দিদি রীতি দিদি রীতি তিনি রীতি তিনি রীতি দিয়া রীতি রীতি রীতি রীতি সারি সারি সারি রীতি সাতি দিয়া দিয়া দিয়া হাতী হাতী হাতী টানি টানি টানি', },
+
+            { title: ' ছ ি ী ব ম ফলকের অভ্যাস', text: 'ছাতি হাতী ছাতি টানি বন তন তম সম মন সম মন নব নব নম বন তম বন তম সম মন সম মন নব নব নম বন রম রব ময় ময় রব ময় রব সম নম সম নম ময় রব সম নম সম', },
+
+            { title: ' হ  ্র ু ফলকের অভ্যাস', text: 'হর হর হরে হানা হানি হাটা হাসি হার হায় হেসে হাত হাতি বহ্নি বহ্নি বহ্নি আহ্নি আহ্নি আহ্নি আহ্নি ব্রত ব্রত ব্রত ব্রত হ্রাস হ্রাস হ্রাস ব্রত ব্রত ব্রত হ্রাস হ্রাস হ্রাস হ্রাস দরিদ্র দরিদ্র দরিদ্র ব্রত হ্রাস দরিদ্র ব্রত হ্রাস দরিদ্র হরে হানা হানি হাটা দরিদ্র বম নম বন নত ব্রত ব্রত তব হয় হয় বম নম বন বম বম নম বন নম বন ব্রত ব্রত ব্রত বহ্নি বহ্নি বুবু বুবু বুবু রুনু রুনু রুনু', },
+
+            { title: 'ক জ , এ প ফলকের অভ্যাস ', text: 'কুকুর কুকু কুসুম কুসুম কুসুম কুসু কনকনে কনকনে কনকনে কন আহ্নিক আহ্নিক ছিনিমিনি ছিনিমিনি ছিনিমিনি ছিনি দুরুদুরু দুরুদুরু দুরুদুরু দুরু আম্রকানন আম্রকানন আম্রকানন আগ্র কদাকার কদাকার কদাকার কদা কানাকানি কানাকানি কানাকানি কানা আনারস আনারস আনারস সহদরা সহদরা সহদরা আনা সহদরা সহদরা ততত তাদের তোমার তাদের নাসের নাদের নেতারা নাসিম রাতের রহিমা ররর রাতের ররর রা আতা আনার আতা আহার আতা আদায় আতা আযান আতা আবার আতা দেমাক দদদ দেবতা দদদ দরুদু দদদ দরুদু হুকুম হহহ হুকুম হহহ হতাম যযয যতক যযয যতিন যযয যাতার যাকের যযয যাতনা যযয যাত যযয যতক যযয যতিন যযয যাতার যযয যাকের যযয যাতনা যযয যাত যতিন দাদা মহরম মাসে আসাদ সাহেব ঢাকা হয়ে নাটোর যাইবেন তোর সবে ব্রত নিস তারেক দরিদ্র রতন আম্রকাননে হাসাহাসি করে কুকুরকে ডাকে করে আদম অমর নয় যত কয় তত নয় তিনি তাহারা আমি আমরা আমাদের কজন, কজন, কজন, নজর, নজর, নজর, জমিদার, জমিদার, জমিদার, জমিদার, জমিদার, জমিদার, জমিদার, জমি, এমন এমন এমন এম অতএব নপন অতএব নপন অতএব নপন, নপন এম একপন একপন এদের, এদের, একদা, একদা, একদা, জোনাকি, জোনাকি, জোনাকি;', },
+
+            { title: 'শ স্হ ল ম । ভ ক্ষ ঘ ঝ ফলকের অভ্যাস ', text: 'রশস রশস রশস রশ রশস রশস রশস রশ স্থান স্থান স্থান স্থা নিল নিল নিল নি সালে সালে সালে সা আব্বা আব্বা আব্বা আ কুটুম্ব কুটুম্ব কুটুম্ব কুটু শ্বশুর শ্বশুর শ্বশু প্রতিমা। প্রতিমা। প্রতিমা। প্রতি নোটিস। নোটিস। নোটিস। স্বস্বস্ব মসম স্বস্বস্ব মসম স্বস্ব সমস স্বস্ব  নক্ষন নক্ষন নক্ষন নক্ষ ভজন ভালুক ভেজাল নভ ভারত ভবন ভোটার ভয়াবহ ভজন ভালুক ভাল নভ ভিক্ষুক অক্ষয় শিক্ষক অক্ষত রক্ষত অক্ষর দক্ষতা মোক্ষমভক্ষুক অক্ষয় ভিক্ষুক  নক্ষন নক্ষন ভিক্ষুক ঝিনুক ঝিল ঝিনুক ঝুমুর প্রভাতে ভ্রমণ করা খুব ঝোলা ঝামেলা ঝুলন ঝকঝক ঝিনুক ভাল। প্রভাতে ভ্রমণ করা খুব ঝিল ঝোলা ঝিনুক ঝিল ভাল। প্রভাতে ভ্রমণ করা প্রভাতে ভ্রমণ করা খুব ভাল। প্রভাতে ভ্রমণ করা খুব ভাল। প্রভাতে ভ্রমণ করা', }, 
+
+	  { title: 'চ ড ও ং ফলকের অভ্যাস ', text: 'তঅচ নদন্ড তঅচ নদন্ড তঅচ নদন্ড তঅচ নদড তঅচ নদড তঅচ নদড তঅচ নদড তঅচ চামড়া চাকরি চটক চালনা চলাচল চালক চাবি চিল চাকু চাকা চিল চামড়া চাকর চট ডুমুর ডেপুটি ডিজাইন ডামাডোল ডজন ড্রাম ড্রিল ডালা ডাকাত ডুমুর ডেপুটি ডিজাইনডাম রযং সক্ত রযং সক্ত রযং সক্ত রযং সক্ত রযং সক্ত রযং সক্ত রযং সক্ত রযং সক্ত রযং ওড়িয়া ওপার ওলকপি ওয়ারিশ ওজন রংপুর তংকা কিংকর রমহল হংস ওপর ওড়না ওয়াদা ওকালতি ওড়িয়া ওপার ওলকপি ও লংকা বংশ লংকা শংকর কিংশুর বংশ রংপুর তংকা বাংলা', },
+
+            { title: '্য ৎ গ ঠ খ ধ ষ র্ ফলকের অভ্যাস', text: 'ক্যাম ব্যথা দ্যুত ধ্যান খ্যাত ঠ্যাং ষ্যাম  তনরস্য তনরস্য তনরস্য তৎপর  উৎকট উৎপাত উৎস সৎ সত্কার তৎপর তৎপর ভৎর্সনা বৎসর কুৎসিত উৎপত্তি চিৎকার সৎকার কষ্ট পৃষ্ঠ নষ্ট গোষ্ঠী ষষ্ঠ দৃষ্ট কষ্ট পুষ্ট নিষ্কাশন বিদ্যুৎ সৎ চিকিৎসা ভৎর্সনা ভৎর্স নছগ তঅচ নছগ তঅচ নছগ তঅচ নছগ তঅচ নছগ গরম গরদ গিনি গহনা গাওয়া গরিলা গামছা গাড়য়ান গরম গরদ গিনি গরম রঠর রঠর রঠর রঠর রঠর সঠস রঠর সঠস রঠর সঠস রঠর ঠাকুর ঠুকনা ঠুমরি হঠাৎ পঠিতব্য গঠন ঠিকানা আঠারো খারাপ খাওয়া খাওয়া খাওয়া  খুৎবা খুৎবা খুৎবা বধ বধর বধ বধর ধারনা ক্ষুধার ধারন ধমনি ধারনা ক্ষুধার ধারন ধারন ধমনি ধারনা ধারন দমনি ধূসর ধাপের ধানের ধারন ধারনা ধমনি ধুসর ধাপের ধানের বমষ সক্ত বমষ সক্ত বমষ সক্ত বমষ সক্ত বমষ সক্ত বমষ বমষ সক্ত বমষ বিষয় পরিভাষা পরিবেশ শোষিত প্রেষিত বিষুবরেখা রাজকোষ কোষাধ্যক্ষ বিশেষ্য কোষাপাল প্রতিশোধ চোষক নিষেধ বিশেষ্য সুষমা অশেষ ভাস্য মানুষ শের আর্য অনার্য আর্য আর্য অনার্য আর্য আর্য অনার্য আর্য বার্ষিক বর্ধমান বিবর্তমান তার্কিক বর্গা নির্ভয় নির্দয় ধর্ম মর্ত্যলোক স্বর্গ বার্ষি গর্ত নির্বাহ পর্ব ধনগর্ত নির্বিকার অর্ধমান অর্ধনির্মিত নির্বিশেষ কর্মা ভর্তা ফর্দ ', },
+
+            { title: 'ঙ ঞ ণ থ ঃ ঁ ফ ড় ঢ় ফলকের অভ্যাস ', text: 'অঙ্গ ব্যাঙ রঙিন লঙ্কা অঙ্গ অঙ্ক অঙ্কন অঙ্গন অঙ্কঅঙ্কন পঞ্চ বাঞ্ছা গঞ্জ অঞ্চল গণ গণনা পণ্ডিত বর্ণ বর্ণনা পথ ব্যথা নাথ প্রতিষ্ঠা স্থল দুঃখ দুঃস্থ দুঃসময় চাঁদ পাঁউরুটি নাঁদ পড় বড় গড় দাঁড় আড়াল ঝাড় গাঢ় ', },
+
+            { title: 'ই ই উ ঊ ঋ এ ঐ ও ঔ ূ ৃ  ফলকের অভ্যাস ', text: 'ইতি ঈদ ইট ঈগল উদয় উনুন উড়ু ঊষা ঊর্ধ্ব ঋণ ঋতু এমন এক একা ঐক্য ঐতিহ্য ওজন ওষুধ ঔষধ ঔজ্জ্বল্য মূল ফুল কূল ভুল সূর্য দূর নূর কৃত কৃষি গৃহ পৃষ্ঠ ঋতু কৃশ তৃষ্ণা', }
+
+
+        ]
+    },
+
+
+
+
+
+{ 
+        id: 'home_row_group', 
+        title: 'যুক্তাক্ষর ', 
+        level: 'Beginner',
+        description: 'যুক্তাক্ষর অনুশীলন',
+        items: [
+            { title: 'যুক্তাক্ষর ১', text: 'ক্ক আক্কেল টেক্কা ক্ট ডক্টর ক্ট্র অক্ট্রয় ক্ত রক্ত ক্ত্র বক্ত্র ক্ব পক্ব ক্বণ ক্ম রুক্মিণী ক্য বাক্য ক্র চক্র ক্ল ক্লান্তি ক্ষ পক্ষ ক্ষ্ণ তীক্ষ্ণ ক্ষ্ব ইক্ষ্বাকু ক্ষ্ম লক্ষ্মী ক্ষ্ম্য সৌক্ষ্ম্য ক্ষ্য লক্ষ্য ক্স বাক্স খ্য সখ্য খ্র খ্রিস্টান গ্‌ণ রুগ্‌ণ গ্ধ মুগ্ধ গ্ধ্য বৈদগ্ধ্য গ্ধ্র দোগ্ধ্রী গ্ন ভগ্ন গ্ন্য অগ্ন্যাস্ত্র অগ্ন্যুৎপাত অগ্ন্যাশয় গ্ব দিগ্বিজয়ী গ্ম যুগ্ম গ্য ভাগ্য গ্র গ্রাম গ্র্য ঐকাগ্র্য সামগ্র্য গ্র্যাজুয়েট গ্ল গ্লানি ঘ্ন কৃতঘ্ন ঘ্য অশ্লাঘ্য ঘ্র ঘ্রাণ ঙ্ক অঙ্ক ঙ্‌ক্ত পঙ্‌ক্তি ঙ্ক্য অঙ্ক্য ঙ্ক্ষ আকাঙ্ক্ষা ঙ্খ শঙ্খ ঙ্গ অঙ্গ ঙ্গ্য ব্যঙ্গ্যার্থ ব্যঙ্গ্যোক্তি ঙ্ঘ সঙ্ঘ ঙ্ঘ্য দুর্লঙ্ঘ্য ঙ্ঘ্র অঙ্ঘ্রি ঙ্ম বাঙ্ময় চ্চ বাচ্চা ছ্ছ ইচ্ছা ছ্ছ্ব জলোচ্ছ্বাস ছ্ছ্র উচ্ছ্রায় চ্ঞ যাচ্ঞা চ্ব চ্বী চ্য প্রাচ্য জ্জ বিপজ্জনক জ্জ্ব উজ্জ্বল জ্ঝ কুজ্ঝটিকা জ্ঞ জ্ঞান জ্ব জ্বর জ্য রাজ্য জ্র বজ্র', },
+
+            { title: 'যুক্তাক্ষর ২', text: 'ঞ্চ অঞ্চল ঞ্ছ লাঞ্ছনা ঞ্জ কুঞ্জ ঞ্ঝ ঝঞ্ঝা ট্ট চট্টগ্রাম ট্ব খট্বা ট্ম কুট্মল ট্য নাট্য ট্র ট্রেন ড্ড আড্ডা ড্ব অন্ড্বান ড্য জাড্য ড্র ড্রাইভার ড্রামড়্গ খড়্‌গ ঢ্য ধনাঢ্য ঢ্র মেঢ্র ণ্ট ঘণ্টা ণ্ঠ কণ্ঠ ণ্ঠ্য কণ্ঠ্য ণ্ড গণ্ডগোল ণ্ড্য পাণ্ড্য ণ্ড্র পুণ্ড্র ণ্ঢ ষণ্ঢ ণ্ণ বিষণ্ণ ণ্ব স্হাণ্বীশ্বর ণ্ম চিণ্ময় ণ্য পূণ্য ত্ত উত্তর ত্ত্র পুত্ত্র ত্ত্ব সত্ত্ব ত্ত্য উত্ত্যক্ত ত্থ অশ্বত্থ ত্ন যত্ন ত্ব রাজত্ব ত্ম আত্মা ত্ম্য দৌরাত্ম্য ত্য সত্য ত্র ত্রিশ ত্রাণ ত্র্য বৈচিত্র্য ৎল কাৎলা ৎস বৎসর উৎসব থ্ব পৃথ্বী থ্য পথ্য থ্র থ্রি দ্গ উদ্গম দ্ঘ উদ্ঘাটন দ্দ উদ্দেশ্য দ্দ্ব তদ্দ্বারা দ্ধ রুদ্ধ দ্ব বিদ্বান দ্ভ অদ্ভুত দ্ভ্র উদ্ভ্রান্ত দ্ম ছদ্ম দ্য বাদ্য দ্র রুদ্র দ্র্য দারিদ্র্য ধ্ন অর্থগৃধ্নু ধ্ব ধ্বনি ধ্ম উদরাধ্মান ধ্য আরাধ্য ধ্র ধ্রুব ',  },
+
+            { title: 'যুক্তাক্ষর ৩', text: 'ন্ট প্যান্ট ন্ট্র কন্ট্রোল ন্ঠ লন্ঠন ন্ড গন্ডার পাউন্ড ন্ড্র হান্ড্রেড ন্ত জীবন্ত ন্ত্ব সান্ত্বনা ন্ত্য অন্ত্য ন্ত্র মন্ত্র ন্ত্র্য স্বাতন্ত্র্য ন্থ গ্রন্থ ন্থ্র অ্যান্থ্রাক্স ন্দ ছন্দ ন্দ্য অনিন্দ্য ন্দ্ব দ্বন্দ্ব ন্দ্র কেন্দ্র ন্ধ অন্ধ ন্ধ্য বিন্ধ্য ন্ধ্র রন্ধ্র ন্ন নবান্ন ন্ব ধন্বন্তরি ন্ম চিন্ময় ন্য ধন্য প্ট পাটি-সাপ্টা ক্যাপ্টেন প্ত সুপ্তপ্ন স্বপ্ন প্প ধাপ্পা প্য প্রাপ্য প্র ক্ষিপ্র প্র্য প্র্যাকটিস প্ল আপ্লুত প্স লিপ্সা ফ্র ফ্রক ফ্রিজ আফ্রিকা রেফ্রিজারেটর ফ্ল ফ্লেভার ব্জ ন্যুব্জব্দ জব্দ ব্ধ লব্ধ ব্ব ডাব্বা ব্য দাতব্য ব্র ব্রাহ্মণ ব্ল ব্লাউজ ভ্ব ভ্বা ভ্য সভ্য ভ্র শুভ্র ম্ন নিম্ন ম্প কম্প ম্প্র সম্প্রতি ম্ফ লম্ফ ম্ব প্রতিবিম্ব ম্ব্র মেম্ব্রেনম্ভ দম্ভ ম্ভ্র সম্ভ্রম ম্ম সম্মান ম্য গ্রাম্য ম্র নম্র ম্ল অম্ল য্য ন্যায্য র্ক তর্ক র্ক্য অতর্ক্য র্গ্য বর্গ্য র্ঘ্য দৈর্ঘ্য র্চ্য অর্চ্য',  },
+
+            { title: 'যুক্তাক্ষর ৪', text: 'র্জ্য বর্জ্য র্ণ্য বৈবর্ণ্য র্ত্য মর্ত্য র্থ্য সামর্থ্য র্ব্য নৈর্ব্যক্তিক র্ম্য নৈষ্কর্ম্য র্শ্য অস্পর্শ্য র্ষ্য ঔৎকর্ষ্য র্হ্য গর্হ্য র্খ মূর্খ র্গ দুর্গ র্গ্র দুর্গ্রহ নির্গ্রন্হ র্ঘ দীর্ঘ র্চ অর্চনা র্ছ মূর্ছনা র্জ অর্জন র্ঝ নির্ঝর র্ট আর্ট কোর্ট কম্ফর্টার শার্ট কার্টিজ আর্টিস্ট পোর্টম্যানটো সার্টিফিকেট কনসার্ট কার্টুন কোয়ার্টার র্ড অর্ডার লর্ড বর্ডার কার্ড র্ণ বর্ণ র্ত ক্ষুধার্ত র্ত্র কর্ত্রী র্থ অর্থ র্দ নির্দয় র্দ্ব নির্দ্বিধা র্দ্র আর্দ্র র্ধ গোলার্ধ র্ধ্ব ঊর্ধ্ব র্ন দুর্নাম র্প দর্প র্ফ স্কার্ফ র্ভ গর্ভ র্ম ধর্ম র্য আর্য র্ল দুর্লভ র্শ স্পর্শ র্শ্ব পার্শ্ব র্ষ ঘর্ষণ র্স জার্সি নার্স পার্সেল কুর্সি র্হ গার্হস্থ্য র্ঢ্য দার্ঢ্য ল্ক শুল্ক ল্ক্য যাজ্ঞবল্ক্য ল্গ বল্গা ল্ট উল্টো ল্ড ফিল্ডিং ল্প বিকল্প ল্‌ফ গল্‌ফ ল্ব বিল্ব বাল্ব ল্‌ভ প্রগল্‌ভ ল্ম গুল্ম ল্য তারল্য',  },
+
+            { title: 'যুক্তাক্ষর ৫', text: 'ল্ল উল্লাস শ্চ পুনশ্চ শ্ছ শিরশ্ছেদ শ্ন প্রশ্ন শ্ব বিশ্ব শ্ম জীবাশ্ম শ্য অবশ্য শ্র মিশ্র শ্ল অশ্লীল ষ্ক শুষ্ক ষ্ক্র নিষ্ক্রিয় ষ্ট কষ্ট ষ্ট্য বৈশিষ্ট্য ষ্ট্র রাষ্ট্র ষ্ঠ শ্রেষ্ঠ ষ্ঠ্য নিষ্ঠ্যূত ষ্ণ কৃষ্ণ ষ্প নিষ্পাপ ষ্প্র নিষ্প্রয়োজন ষ্ফ নিষ্ফল ষ্ব মাতৃষ্বসা ষ্ম উষ্ম ষ্য শিষ্য স্ক মনোস্কামনা স্ক্র ইস্ক্রু স্খ স্খলন স্ট স্টেশন স্ট্র স্ট্রাইক স্ত ব্যস্ত স্ত্ব বহিস্ত্বক স্ত্য অস্ত্যর্থ স্ত্র স্ত্রী স্থ দুঃস্থ স্থ্য স্বাস্থ্য স্ন স্নান স্প আস্পর্ধা স্প্র স্প্রিং স্প্‌ল স্প্‌লিন স্ফ আস্ফালন স্ব স্বর স্ম স্মরণ স্য শস্য স্র অজস্র স্ল স্লোগান হ্ণ অপরাহ্ণ হ্ন চিহ্ন হ্ব আহ্বান হ্ম ব্রাহ্মণ হ্য বাহ্য হ্র হ্রদ হ্ল আহ্লাদ',  }
+        ]
+    },
+
+
+
+
+
+{ 
+        id: 'home_row_group', 
+        title: 'বাক্য ', 
+        level: 'Beginner',
+        description: 'বাক্য অনুশীলন ',
+        items: [
+            { title: 'কার প্র্যাকটিস', text: 'কা কি কী কু কূ কৃ কে কৈ কো কৌ খা খি খী খু খূ খৃ খে খৈ খো খৌ গা গি গী গু গূ গৃ গে গৈ গো গৌ ঘা ঘি ঘী ঘু ঘূ ঘৃ ঘে ঘৈ ঘো ঘৌ ঙা ঙি ঙী ঙু ঙূ ঙৃ ঙে ঙৈ ঙো ঙৌ চা চি চী চু চূ চৃ চে চৈ চো চৌ ছা ছি ছী ছু ছূ ছৃ ছে ছৈ ছো ছৌ জা জি জী জু জূ জৃ জে জৈ জো জৌ ঝা ঝি ঝী ঝু ঝূ ঝৃ ঝে ঝৈ ঝো ঝৌ ঞা ঞি ঞী ঞু ঞূ ঞৃ ঞে ঞৈ ঞো ঞৌ টা টি টী টু টূ টৃ টে টৈ টো টৌ ঠা ঠি ঠী ঠু ঠূ ঠৃ ঠে ঠৈ ঠো ঠৌ ডা ডি ডী ডু ডূ ডৃ ডে ডৈ ডো ডৌ ঢা ঢি ঢী ঢু ঢূ ঢৃ ঢে ঢৈ ঢো ঢৌ ণা ণি ণী ণু ণূ ণৃ ণে ণৈ ণো ণৌ তা তি তী তু তূ তৃ তে তৈ তো তৌ থা থি থী থু থূ থৃ থে থৈ থো থৌ দা দি দী দু দূ দৃ দে দৈ দো দৌ ধা ধি ধী ধু ধূ ধৃ ধে ধৈ ধো ধৌ না নিঁ নী নু নূ নৃ নে নো নৌ পা পি পী পু পূ পৃ পে পো পৌ ফা ফি ফী ফু ফূ ফৃ ফে ফৈ ফো ফৌ বা বি বী বু বূ বৃ বে বৈ বো বৌ ভা ভি ভী ভু ভূ ভৃ ভে ভৈ ভো ভৌ মা মি মী মু মূ মৃ মে মো মৌ যা যি যী যু যূ যৃ যে যৈ যো যৌ রা রি রী রু রূ রৃ রে রৈ রো রৌ লা লি লী লু লূ লৃ লে লৈ লো লৌ শা শি শী শু শূ শৃ শে শৈ শো শৌ ষা ষি ষী ষু ষূ ষৃ ষে ষৈ ষো ষৌ সা সি সী সু সূ সৃ সে সৈ সো সৌ হা হি হী হু হূ হৃ হে হৈ হো হৌ ড়া ড়ি ড়ী ড়ু ড়ূ ড়ৃ ড়ে ড়ৈ ড়ো ড়ৌ ঢ়া ঢ়ি ঢ়ী ঢ়ু ঢ়ূ ঢ়ৃ ঢ়ে ঢ়ৈ ঢ়ো ঢ়ৌ য়া য়ি য়ী য়ু য়ূ য়ৃ য়ে য়ৈ য়ো য়ৌ', },
+
+            { title: 'বাক্য প্র্যাকটিস',  text: 'মা দাদা বীজ নদী শিশু কবি মাটি গাছ ধূলি চুল ঝুড়ি বৃষ্টি শীত পুঁটি তীর মূর্তি দীঘি ঢেউ তুষার ছাতা পথিক সোনা ঘুড়ি বোন ছুটি সুধা রুটি খোকা নৌকা সূর্য জুতা গোধূলি মেঘ দাঁত কুঁড়ি চাঁদ জোছনা খোলা মেয়ে ডালি ধৈর্য মোজা ঝাঁপি থালা হাটে ঢোলা তোতা খাঁচা ঢাক খুলি কোষ গোপী ঝিল রথ খুঁটি নীল তুলি খুড়ো শূন্য ফুলি সাঁতার বোতল পূজা পোকা হাট গুটি জুঁই পাখি লোহা ছাই মুকুট চিরুনি ডুব ভেলা চামচ মিষ্টি চিঠি ফুটা রোজা গলা লতা বাটি দুধ গৃহ ভূমি মুনি সীতা পিতা ছেলেকে খাঁচা সুরা রাশি কুঁয়া দোলা বোঝা পাতা চামড়া খুদে ঘুটা কাব্য ছানা খেলা ভুলু বানী রাধা হাওয়া পুঁছা ঢিপি সোনা রুটির কুলি দাদু মেদু চুঁই শুঁটি বেলি কাঁদি ঝুলি গুলা ফুলি বানু খুপি দিশা রাশি হীরি বেদি কানা টুল ডালা ভাঙা ঝাঁটা খালা লুকি ধারা গালু ঠুলি ঝড়ো পুঁতি খামি ফালি গুলি গুমটি খুপড়ি ভূতা বুড়ি লতা লিপি খুপি ডুবি জুটি কুড়ি পুঁজি বাটি জুড়ি খালি চুলা সিমি ফেনা দুধি গেদা রেশা বেধা টুলি শিকল ঝাঁকি লোপা বীণা তোড়া ফুটি কাশি দুলি শুঁড়ি চুড়ি গোঁফ বোবা পানা রুমাল ছাতা চুপা কুঁচি দুলাল সিসা ঝরা পুকুর বালু গুলতি পাতা রানা খাজা দুলা খুঁড়ো গাঢ়া টিকি লাবণ মুঠো ঝুঁকি সুলভ পিপা গুমড়ি চুরি', }
+        ]
+    }
+
+    // এভাবে আরও গ্রুপ যোগ করতে পারেন
+];
+
+
+
+function loadLessons() {
+    const lessonContainer = document.getElementById("lessonCards");
+    if (!lessonContainer) return;
+    lessonContainer.innerHTML = "";
+
+    // ১. আপনার সব ধরণের ডাটাকে একটি লিস্টে নিয়ে আসা
+    const ALL_GROUPS = [
+        ...NESTED_LESSONS // আপনার ড্রপডাউন করা হোম রো/টপ রো গ্রুপগুলো
+       
+    ];
+
+    ALL_GROUPS.forEach(group => {
+        // ডাটা না থাকলে দেখাবে না
+        if (!group.items || group.items.length === 0) return;
+
+        const groupWrapper = document.createElement("div");
+        groupWrapper.style.marginBottom = "10px";
+
+        const mainCard = document.createElement("div");
+        mainCard.style.cssText = "background:#2a2d37; border:1px solid #3a3f4b; padding:15px; border-radius:12px; cursor:pointer; text-align:left; transition:0.2s;";
+        mainCard.innerHTML = `
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+                <div>
+                    <div style="font-weight:bold; color:#e5e7eb;">${group.title}</div>
+                    <div style="font-size:11px; color:#60a5fa;">${group.description}</div>
+                </div>
+                <span id="icon-${group.id}" style="color:#9ca3af;">▼</span>
+            </div>
+        `;
+
+        const subItemsDiv = document.createElement("div");
+        subItemsDiv.id = `items-${group.id}`;
+        subItemsDiv.style.cssText = "display:none; background:#1f2937; border:1px solid #3a3f4b; border-top:none; border-radius:0 0 12px 12px; padding:5px;";
+
+        group.items.forEach(item => {
+            const itemBtn = document.createElement("div");
+            itemBtn.style.cssText = "padding:10px 12px; color:#d1d5db; font-size:13px; cursor:pointer; border-bottom:1px solid #2a2d37; transition:0.2s;";
+            itemBtn.setAttribute("data-title", item.title);
+            itemBtn.classList.add('lesson-tracker-btn');
+
+ 	
+	// lession side result
+		let lessonStats = "";
+            try {
+                let allResults = JSON.parse(localStorage.getItem("bijoy_lesson_results") || "{}");
+                if (allResults[item.title]) {
+                    let st = allResults[item.title];
+		  let accColor = parseInt(st.acc) < 95 ? "#ef4444" : "#10b981";lessonStats = `<span style="font-size:14px; display:inline-flex; align-items:center; gap:6px; background:#1f2937; padding:2px 6px; border-radius:4px; border:1px solid #3a3f4b; margin-left:5px;">
+                        <span style="color:#818cf8;"> ${st.wpm} WPM</span> </br>
+                        <span style="color:${accColor};"> ${st.acc}% </span>
+                    </span>`;
+                }
+            } catch(e){}
+
+            itemBtn.innerHTML = `<span>• ${item.title}</span> <span id="stat-${item.title.replace(/\s+/g, '')}">${lessonStats}</span>`;
+
+             itemBtn.onmouseover = () => itemBtn.style.background = "#3a3f4b";
+            itemBtn.onmouseout = () => itemBtn.style.background = "transparent";
+            
+            itemBtn.onclick = (e) => {
+                e.stopPropagation();
+		currentLessonTitle = item.title;
+                document.getElementById("target").value = item.text;
+
+
+
+	// ১. আগে সিলেক্ট করা সব লেসনের হাইলাইট মুছে ফেলা
+document.querySelectorAll('.lesson-tracker-btn').forEach(btn => {
+    btn.style.color = "#d1d5db";
+    btn.style.fontWeight = "normal";
+    btn.style.borderLeft = "none";
+});
+
+// ২. এখন যেটায় ক্লিক করা হলো, শুধু সেটাকে হাইলাইট করা
+itemBtn.style.color = "#60a5fa"; // নীল টেক্সট
+itemBtn.style.fontWeight = "bold"; // লেখা মোটা করা
+itemBtn.style.borderLeft = "3px solid #60a5fa"; // বাম পাশে নীল দাগ
+                start();
+            };
+
+            subItemsDiv.appendChild(itemBtn);
+        });
+
+        mainCard.onclick = () => {
+            const isHidden = subItemsDiv.style.display === "none";
+            subItemsDiv.style.display = isHidden ? "block" : "none";
+            document.getElementById(`icon-${group.id}`).innerText = isHidden ? "▲" : "▼";
+            mainCard.style.borderRadius = isHidden ? "12px 12px 0 0" : "12px";
+        };
+
+        groupWrapper.appendChild(mainCard);
+        groupWrapper.appendChild(subItemsDiv);
+        lessonContainer.appendChild(groupWrapper);
+    });
+}
+
+
+
+
+// কার্ড তৈরির জন্য একটি কমন ফাংশন (কোড ক্লিন রাখার জন্য)
+function createCard(lesson, container) {
+    const card = document.createElement("div");
+    card.style.cssText = "background:#2a2d37; border:1px solid #3a3f4b; padding:15px; border-radius:12px; cursor:pointer; text-align:left; transition:0.2s; margin-bottom:10px;";
+    card.className = "lesson-card";
+    
+    card.innerHTML = `
+        <div style="font-weight:bold; color:#e5e7eb;">${lesson.title}</div>
+        <div style="font-size:12px; color:#9ca3af; margin-top:5px;">${lesson.level}</div>
+        <div style="font-size:11px; color:#60a5fa; margin-top:5px;">${lesson.description}</div>
+    `;
+
+    card.onclick = () => {
+        document.getElementById("target").value = lesson.text;
+        start();
+    };
+    
+    container.appendChild(card);
+}
+
+
+
+function updateCategoryCounters() {
+    let allResults = JSON.parse(localStorage.getItem("bijoy_lesson_results") || "{}");
+
+    document.querySelectorAll('[id^="items-"]').forEach((group) => {
+        let btns = group.querySelectorAll('.lesson-tracker-btn');
+        let total = btns.length;
+        let completed = 0;
+
+       btns.forEach((btn) => {
+            // একদম ১০০% নিখুঁতভাবে নাম খোঁজার জন্য data-title ব্যবহার করা হলো
+            let lessonTitle = btn.getAttribute("data-title");
+            
+            if (lessonTitle) {
+                let st = allResults[lessonTitle];
+                // অ্যাকুরেসি ৯৮ বা তার বেশি হলে কমপ্লিট কাউন্ট বাড়বে
+                if (st && parseInt(st.acc) >= 95) {
+                    completed++;
+                }
+            }
+        });
+
+        let header = group.previousElementSibling;
+        if (header) {
+            let counterSpan = header.querySelector('.lesson-counter');
+            
+            if (!counterSpan) {
+                counterSpan = document.createElement('span');
+                counterSpan.className = 'lesson-counter';
+                counterSpan.style.fontSize = '14px';
+                // ৯৮% হলে সবুজ, না হলে ডিফল্ট নীল দেখাবে
+                counterSpan.style.color = completed === total ? '#10b981' : '#60a5fa'; 
+                counterSpan.style.marginRight = '10px';
+                counterSpan.style.fontWeight = 'bold';
+                counterSpan.style.backgroundColor = 'rgba(255, 255, 255, 0.05)';
+                counterSpan.style.padding = '2px 8px';
+                counterSpan.style.borderRadius = '6px';
+                
+                let iconSpan = header.querySelector("span[id^='icon-']");
+                // এখানে parentElement যোগ করা হয়েছে যাতে সঠিক জায়গায় বসে
+                if (iconSpan && iconSpan.parentElement) {
+                    iconSpan.parentElement.insertBefore(counterSpan, iconSpan);
+                }
+            }
+            
+            // কালার ডাইনামিক আপডেট
+            counterSpan.style.color = completed === total ? '#10b981' : '#60a5fa';
+            counterSpan.innerText = `${completed}/${total}`;
+        }
+    });
+}
+
+
+
+
+function buildKeyboard(){
+  let keyboard = document.getElementById("keyboard");
+
+  if(!keyboard) return; // safety
+
+  keyboard.innerHTML = "";
+
+  KEYBOARD_ROWS.forEach(row => {
+    let rowDiv = document.createElement("div");
+    rowDiv.className = "row";
+
+    row.forEach(key => {
+      let keyDiv = document.createElement("div");
+      keyDiv.className = "key";
+      let display = key;
+
+      // show bijoy character if available
+      let normal = BIJOY_MAP[key] || "";
+      let shift = BIJOY_SHIFT_MAP[key] || "";
+      let en = key;
+
+      // special keys
+      if(["Backspace","Enter","Shift","Tab","Caps","Ctrl","Alt","Space","FN","Menu","window"].includes(key)){
+        keyDiv.innerHTML = `<div class="key-label">${key.toUpperCase()}</div>`;
+      } else {
+        keyDiv.innerHTML = `
+  <div class="shift">${shift}</div>
+  <div class="main">${normal}</div>
+  <div class="en">${en.toUpperCase()}</div>
+`;
+      }
+
+
+      if(key === "Backspace" || key === "Enter") keyDiv.classList.add("xwide");
+      else if(key === "Shift" || key === "Tab" || key === "Caps") keyDiv.classList.add("wide");
+      else if(key === "Space") keyDiv.classList.add("space");
+
+      keyDiv.id = "key-" + key.toLowerCase();
+
+      rowDiv.appendChild(keyDiv);
+    });
+
+    keyboard.appendChild(rowDiv);
+  });
+}
+
+
+window.onload = function(){
+    buildKeyboard();
+    loadLessons(); // এই লাইনটি যোগ করুন
+  updateCategoryCounters();
+
+// টার্গেট বক্সে কিছু টাইপ বা পেস্ট করলে লেসনের হাইলাইট মুছে যাবে
+document.getElementById("target").addEventListener("input", function() {
+    currentLessonTitle = ""; // লেসন ট্র্যাকিং বন্ধ
+
+    // সাইডবারের লেসন হাইলাইট রিমুভ করা
+    document.querySelectorAll('.lesson-tracker-btn').forEach(btn => {
+        btn.style.color = "#d1d5db";
+        btn.style.fontWeight = "normal";
+        btn.style.borderLeft = "none";
+    });
+
+    // কিবোর্ডের ইনস্ট্রাকশন গাইড অফ করা
+    highlightNextKey(null);
+});
+
+
+
+// টার্গেট বক্সে Enter চাপলে অটোমেটিক Start হয়ে যাবে
+document.getElementById("target").addEventListener("keydown", function(e) {
+    if (e.key === "Enter") {
+        e.preventDefault(); // Enter এর কারণে যেন নতুন লাইন তৈরি না হয়
+        start();
+    }
+});
+
+
+// মিনিট লিখলে অটোমেটিক সেকেন্ডের ঘরে ফোকাস যাবে
+document.getElementById("customTimeMin").addEventListener("input", function() {
+    if (this.value.length >= 2) {
+        document.getElementById("customTimeSec").focus();
+    }
+});
+
+// সেকেন্ড লিখে Enter চাপলেই টাইম সেট হয়ে যাবে
+document.getElementById("customTimeSec").addEventListener("keydown", function(e) {
+    if (e.key === "Enter") {
+        setCustomTime();
+    }
+});
+
+// মিনিটের ঘরেও Enter চাপলে সেকেন্ডের ঘরে যাবে
+document.getElementById("customTimeMin").addEventListener("keydown", function(e) {
+    if (e.key === "Enter") {
+        document.getElementById("customTimeSec").focus();
+    }
+});
+
+};
+
+// start
+function start(){
+    let rawTarget = document.getElementById("target").value;
+    
+    localStorage.setItem("savedTypingText", rawTarget);
+    target = rawTarget.replace(/\s+/g, ' ').trim();
+
+    let totalTargetWords = target === "" ? 0 : target.split(/\s+/).length;         // টার্গেটে মোট কয়টি শব্দ আছে তা গণনা করা
+    document.getElementById("wordCount").innerText = totalTargetWords;
+
+    document.getElementById("inputBox").value = "";
+    document.getElementById("inputBox").disabled = false;
+    document.querySelector(".text-display").scrollTop = 0;
+
+   testEnded = false;
+    startTime = null; 
+    if(timer) clearInterval(timer);
+    
+    remainingTime = totalTime > 0 ? totalTime : 0;     // Jodi setTime na kora hoy, tobe 0 theke shuru hobe
+    updateTimeDisplay();
+
+  mistakes = 0;
+  permanentMistakeCount = 0;
+  correctKeyCount = 0;
+  document.getElementById("correctKeyCount").innerText = 0;
+  document.getElementById("mistakeCount").innerText = 0;
+  document.getElementById("accuracy").innerText = 100;
+  document.getElementById("wpm").innerText = 0;
+  document.getElementById("progressBar").style.width = "0%";
+  document.getElementById("inputBox").focus();
+
+  render("");
+}
+
+
+
+function restartTest() {
+    if(timer) clearInterval(timer);
+    startTime = null;
+    testEnded = false;
+    
+    // ১. টার্গেট বক্স এবং জাভাস্ক্রিপ্ট টার্গেট ভেরিয়েবল একদম খালি করা
+    document.getElementById("target").value = ""; 
+    target = ""; 
+
+    // ২. টেক্সট ডিসপ্লে (টাইপিং এরিয়া) পরিষ্কার করা এবং স্ক্রল শুরুতে নেওয়া
+    const container = document.querySelector(".text-display");
+    if(container) container.scrollTop = 0;
+    document.getElementById("textInner").innerHTML = "";
+
+    // ৩. স্ট্যাটাস বার এবং ইনপুট বক্স ক্লিন করা
+    mistakes = 0;
+    permanentMistakeCount = 0;
+    correctKeyCount = 0;
+    
+    document.getElementById("correctKeyCount").innerText = 0;
+    document.getElementById("wordCount").innerText = "0";
+    document.getElementById("mistakeCount").innerText = 0;
+    document.getElementById("accuracy").innerText = 100;
+    document.getElementById("wpm").innerText = 0;
+    document.getElementById("progressBar").style.width = "0%";
+    
+    const inputBox = document.getElementById("inputBox");
+    inputBox.value = "";
+    inputBox.disabled = false;
+
+    // ৪. টাইমার রিসেট (আগের সেট করা সময়ে ফিরে যাবে)
+    if(totalTime > 0) {
+        remainingTime = totalTime;
+    } else {
+        remainingTime = 0;
+    }
+    updateTimeDisplay();
+    
+    // ৫. রেজাল্ট বার হাইড করা
+    const lastSessionDiv = document.getElementById("lastSession");
+    if(lastSessionDiv) lastSessionDiv.style.display = "none";
+
+    // ৬. কিবোর্ড গাইড থেকে আগের হাইলাইট মুছে ফেলা
+    highlightNextKey(null);
+
+  // ৭. **নতুন সংযোজন:** লেসন সিলেকশন ক্লিয়ার করা
+    currentLessonTitle = ""; // কারেন্ট লেসনের নাম মুছে দেওয়া হলো
+    document.querySelectorAll('.lesson-tracker-btn').forEach(btn => {
+        btn.style.color = "#d1d5db";
+        btn.style.fontWeight = "normal";
+        btn.style.borderLeft = "none";
+    });
+
+    // ৮. সবশেষে টার্গেট বক্সে ফোকাস করা যাতে নতুন টেক্সট পেস্ট করা যায়
+    document.getElementById("target").focus();
+}
+
+
+// time
+function setTime(sec){
+  totalTime = sec;
+  remainingTime = sec;
+  updateTimeDisplay();
+}
+
+function setCustomTime(){
+  let minVal = parseInt(document.getElementById("customTimeMin").value) || 0;
+  let secVal = parseInt(document.getElementById("customTimeSec").value) || 0;
+  
+  let totalSeconds = (minVal * 60) + secVal;
+  
+  if(totalSeconds > 0) {
+    setTime(totalSeconds);
+  }
+}
+
+function updateTimeDisplay(){
+  let m = Math.floor(remainingTime / 60);
+  let s = remainingTime % 60;
+  document.getElementById("time").innerText =
+    String(m).padStart(2,'0') + ":" +
+    String(s).padStart(2,'0');
+}
+
+
+
+
+
+
+// --- ফিজিক্যাল ব্যাকস্পেস (কীবোর্ড থেকে) কাউন্ট করার স্ট্রং লজিক ---
+document.getElementById("inputBox").addEventListener("keydown", function(e){
+    if(testEnded) return;
+    
+    // e.key === "Backspace" (অ্যাকশন) এবং e.code === "Backspace" (ফিজিক্যাল বাটন)
+    // এর ফলে বিজয়ের পাঠানো অটোমেটিক/হিডেন ব্যাকস্পেস ইগনোর হবে।
+    if (e.key === "Backspace" && e.code === "Backspace" && this.value.length > 0) {
+        permanentMistakeCount++;
+        // ব্যাকস্পেস চাপার সাথে সাথেই UI আপডেট করে ভুল দেখিয়ে দেবে
+        document.getElementById("mistakeCount").innerText = permanentMistakeCount; 
+    }
+});
+
+
+
+
+// --------- typing (inputBox ইভেন্ট লিসেনার )  ---------------------
+document.getElementById("inputBox").addEventListener("input", function(e){
+  if(testEnded) return;
+
+  let input = this.value;
+try { if (val.normalize) { val = val.normalize("NFC"); } } catch (e) { console.log("Normalization not supported");
+    }
+
+
+// ব্যাকস্পেস দিলে নতুন করে ভুল ধরব না
+    if (e.inputType === 'deleteContentBackward') {
+	render(input);
+        return;
+    }
+
+
+    let inputArr = splitGraphemes(input);
+    let targetArr = splitGraphemes(target);
+
+  // যদি ইনপুট করা বর্ণের সংখ্যা টার্গেটের চেয়ে বেশি হয়, তবেই আটকাবে
+    if(inputArr.length > targetArr.length) {
+        this.value = inputArr.slice(0, targetArr.length).join('');
+        return;
+    }
+
+
+// --- পারমানেন্ট ভুল ট্র্যাক করার লজিক ---
+    let currentIndex = inputArr.length - 1; 
+    if (currentIndex >= 0 && currentIndex < targetArr.length) {
+        let typedChar = inputArr[currentIndex] || "";
+        let targetChar = targetArr[currentIndex] || "";
+        let cleanTyped = typedChar.replace(/[\u25CC\u200B-\u200D\uFEFF]/g, "");
+
+        let isMistake = true;
+
+        // ১. কারেন্ট অক্ষরের ভুল চেক
+        if (cleanTyped !== "" && (targetChar === cleanTyped || targetChar.startsWith(cleanTyped))) {
+            isMistake = false; 
+        } 
+        // ২. 'g', হসন্ত বা যেকোনো কার চাপলে কোনোভাবেই ভুল ধরবে না (আগের সেই ম্যাজিক লজিক)
+        else if (['g','্'].includes(cleanTyped) || cleanTyped.includes('্')) {
+            isMistake = false;
+        }
+
+       if (isMistake && cleanTyped !== "") {
+            permanentMistakeCount++; 
+        }
+
+        // ৩. অসম্পূর্ণ যুক্তবর্ণের ভুল ধরার লজিক (তবে 'g' বা কার চাপলে স্কিপ করবে)
+        if (currentIndex > 0) {
+            let prevTyped = (inputArr[currentIndex - 1] || "").replace(/[\u25CC\u200B-\u200D\uFEFF]/g, "");
+            let prevTarget = targetArr[currentIndex - 1] || "";
+            
+            // বর্তমান অক্ষরটা কি যুক্তবর্ণ বানানোর কোনো পার্ট? 
+            let isBuildingNextPart = ['g', '্' ].includes(cleanTyped) || cleanTyped.includes('্');
+
+            // যদি তুমি যুক্তবর্ণ না বানিয়ে অন্য কোনো অক্ষর বা স্পেস চাপো, তখনই শুধু আগেরটাকে ভুল ধরবে!
+            if (!isBuildingNextPart && prevTyped !== "" && prevTarget !== prevTyped && prevTarget.startsWith(prevTyped)) {
+                permanentMistakeCount++;
+            }
+        }
+    }
+
+
+
+  // এটি inputBox ইভেন্টের ভেতরে থাকবে
+if (!startTime && input.length > 0) { 
+    startTime = Date.now(); 
+    timer = setInterval(updateTime, 1000); 
+   }
+
+  render(this.value);
+
+
+
+// ৩. টাইপিং শেষ হলে সাথে সাথে রেজাল্ট দেখানো (সময় শেষ হওয়ার আগেই)
+if (targetArr.length > 0 && inputArr.length >= targetArr.length) {
+            testEnded = true;
+            clearInterval(timer);
+           setTimeout(showResult, 500); // কাস্টম মোডাল দেখাবে    
+}
+});
+
+
+
+
+// পপ-আপ দেখানোর ফাংশন
+function showResult() {
+    let wpm = document.getElementById("wpm").innerText;
+    let acc = document.getElementById("accuracy").innerText;
+    let currentTime = document.getElementById("time").innerText;    
+
+let finalTimeStr = "";
+    if (totalTime > 0) {
+        let spent = totalTime - remainingTime;   // Countdown mode-e koto somoy bay hoyeche
+        let m = Math.floor(spent / 60);
+        let s = spent % 60;
+        finalTimeStr = String(m).padStart(2,'0') + ":" + String(s).padStart(2,'0');
+    } else {
+        finalTimeStr = document.getElementById("time").innerText;      // Stopwatch mode-e mot somoy
+    }
+
+
+
+    document.getElementById("modalCorrectKeys").innerText = correctKeyCount;
+    document.getElementById("modalMistake").innerText = mistakes;
+    document.getElementById("modalWpm").innerText = wpm;
+   
+    let modalAccElement = document.getElementById("modalAcc");  // মডালেও ৯২% এর নিচে লাল দেখাবে
+    modalAccElement.innerText = acc;
+    if (acc < 95) { modalAccElement.style.color = "#ef4444"; // লাল
+    } else { modalAccElement.style.color = "#22c55e"; }	              // সবুজ
+
+
+// মজার মোটিভেশনাল মেসেজ (Serial)
+let motivationMsg = document.getElementById("motivationalMsg");
+
+if (acc < 95) {
+    // খারাপ স্কোরের জন্য লাল/কমলা স্টাইল
+    motivationMsg.style.background = "rgba(245, 158, 11, 0.1)";
+    motivationMsg.style.borderColor = "#f59e0b";
+    motivationMsg.style.color = "#fcd34d";
+    
+    motivationMsg.innerHTML = funnyMessages[msgIndex];
+    motivationMsg.style.display = "block";
+    
+    msgIndex++;
+    if (msgIndex >= funnyMessages.length) {
+        msgIndex = 0;
+    }
+} else {
+    // ভালো স্কোরের জন্য সবুজ/নীল স্টাইল
+    motivationMsg.style.background = "rgba(16, 185, 129, 0.1)"; // হালকা সবুজ
+    motivationMsg.style.borderColor = "#10b981"; // সবুজ বর্ডার
+    motivationMsg.style.color = "#6ee7b7"; // সবুজ টেক্সট
+    
+    motivationMsg.innerHTML = goodMessages[goodMsgIndex];
+    motivationMsg.style.display = "block";
+    
+    goodMsgIndex++;
+    if (goodMsgIndex >= goodMessages.length) {
+        goodMsgIndex = 0;
+    }
+}
+
+
+
+    document.getElementById("modalTime").innerText = finalTimeStr;
+    document.getElementById("resultModal").style.display = "flex";
+}
+
+
+// মডাল বন্ধ করার এবং পরের লেসনে যাওয়ার ফাংশন
+function closeModal() {
+    document.getElementById("resultModal").style.display = "none";
+ 
+     document.getElementById("wordCount").innerText = "0";	   // Word Count রিসেট করা হলো এখানে 
+
+    saveSessionResult();
+    showLastSession();
+
+    // বর্তমান অ্যাকুরেসি চেক করা
+    let currentAcc = parseInt(document.getElementById("accuracy").innerText);
+
+    // প্রফেশনাল রুল: অ্যাকুরেসি ৯৫% এর নিচে হলে পরের লেসনে যাবে না
+    if (currentAcc < 95) {
+        start(); // বর্তমান লেসন আবার শুরু হবে
+        setTimeout(() => document.getElementById("inputBox").focus(), 100);
+        return; // কোড এখানেই থেমে যাবে, পরের লেসন খুঁজবে না
+    }
+
+    // অ্যাকুরেসি ৯৫% বা তার বেশি হলে পরের লেসন খুঁজে বের করা
+    let btns = document.querySelectorAll('.lesson-tracker-btn');
+    let nextLessonFound = false;
+    
+    for (let i = 0; i < btns.length; i++) {
+        if (btns[i].style.fontWeight === "bold") {
+            if (i + 1 < btns.length) {
+                btns[i + 1].click(); 
+                
+                let parentGroup = btns[i + 1].parentElement;
+                if (parentGroup && parentGroup.id.startsWith("items-")) {
+                    parentGroup.style.display = "block";
+                    let iconSpan = parentGroup.previousElementSibling.querySelector("span[id^='icon-']");
+                    if (iconSpan) iconSpan.innerText = "▲";
+                }
+                
+                nextLessonFound = true;
+            }
+            break;
+        }
+    }
+
+    if (!nextLessonFound) {
+        start();
+    }
+    
+    setTimeout(() => document.getElementById("inputBox").focus(), 100);
+}
+
+
+
+// রেজাল্ট মডাল ওপেন থাকলে Enter চাপলেই 'প্র্যাকটিস চালিয়ে যান' ট্রিগার হবে
+document.addEventListener("keydown", function(e) {
+    let modal = document.getElementById("resultModal");
+    if (modal && modal.style.display === "flex" && e.key === "Enter") {
+        e.preventDefault();
+        closeModal();
+    }
+});
+
+
+// timer
+function updateTime(){
+    if(testEnded) return;
+
+    if(totalTime > 0){
+        remainingTime--;
+        if(remainingTime <= 0){
+            remainingTime = 0;
+            testEnded = true;
+            clearInterval(timer);
+            document.getElementById("inputBox").disabled = true;
+            showResult();
+        }
+    } else {
+        // Stopwatch Mode: Jodi kono time select na kora hoy
+        if (remainingTime === undefined || remainingTime === null) remainingTime = 0;
+        remainingTime++; // Somoy 0 theke barbe
+    }
+    updateTimeDisplay();
+
+}
+
+
+
+// keyboard highlight
+
+document.addEventListener("keyup", function(e){
+  let code = e.code;
+  let key = e.key.toLowerCase();
+
+   if(code.startsWith("Key")) key = code.replace("Key","").toLowerCase();
+  else if(code.startsWith("Digit")) key = code.replace("Digit","");
+  else{
+     const map = {
+      Backquote: "`",
+      Minus: "-",
+      Equal: "=",
+      BracketLeft: "[",
+      BracketRight: "]",
+      Backslash: "\\",
+      Semicolon: ";",
+      Quote: "'",
+      Comma: ",",
+      Period: ".",
+      Slash: "/",
+
+      Space: "space",
+      Enter: "enter",
+      Tab: "tab",
+      Backspace: "backspace",
+
+      ShiftLeft: "shift",
+      ShiftRight: "shift",
+
+      ControlLeft: "ctrl",
+      ControlRight: "ctrl",
+
+      AltLeft: "alt",
+      AltRight: "alt"
+    };
+
+    key = map[code];
+  }
+
+  if(!key) return;
+
+  let el = document.getElementById("key-" + key);
+  if(el){
+    el.classList.add("active");
+    setTimeout(()=>el.classList.remove("active"),100);
+  }
+
+  if(code === "Tab"){
+    e.preventDefault();
+    start();
+  }
+});
+
+
+function highlightNextKey(expectedChar) {
+    // ১. আগের সব হাইলাইট মুছে ফেলা
+    document.querySelectorAll('.key.next-guide, .key.shift-guide').forEach(el => {
+        el.classList.remove('next-guide', 'shift-guide');
+    });
+
+    if (currentLessonTitle !== 'স্বরবর্ণ (Vowels)' && currentLessonTitle !== 'ব্যঞ্জনবর্ণ ও সংখ্যা' ) {
+        return; 
+    }
+
+    if (!expectedChar) return;
+
+    // ২. স্পেস এবং ব্রাউজারের অটো-জেনারেটেড ডটেড সার্কেল (◌) ক্লিন করা
+    let cleanChar = expectedChar.replace(/[\s\u25CC\u200B-\u200D\uFEFF]/g, '');
+
+    if (cleanChar === '') {
+        document.getElementById('key-space')?.classList.add('next-guide');
+        return;
+    }
+
+    let targetKey = null;
+    let needsShift = false;
+
+    // ৩. ইউজারের ইনপুট বক্সের বর্তমান অবস্থা চেক করা (g কি চাপা হয়েছে কিনা তা বোঝার জন্য)
+    let typedText = document.getElementById("inputBox").value;
+    let lastTypedChar = typedText.slice(-1);
+
+   // ৪. স্বরবর্ণের ডাইনামিক লজিক (g চাপার আগে ও পরে)
+    const vowelMap = {
+        'আ': { k: 'f', shift: false },
+        'ই': { k: 'd', shift: false },
+        'ঈ': { k: 'd', shift: true },
+        'উ': { k: 's', shift: false },
+        'ঊ': { k: 's', shift: true },
+        'ঋ': { k: 'a', shift: false },
+        'এ': { k: 'c', shift: false },
+        'ঐ': { k: 'c', shift: true },
+        'ঔ': { k: 'x', shift: true }
+    };
+
+    if (vowelMap[cleanChar]) {
+        if (lastTypedChar === '্') {
+            // ইউজার অলরেডি 'g' (্) চেপেছে, তাই এখন কার-এর আসল বাটনটা দেখাবে
+            targetKey = vowelMap[cleanChar].k;
+            needsShift = vowelMap[cleanChar].shift;
+        } else {
+            // এখনো 'g' চাপেনি, তাই 'g' বাটন দেখাবে
+            targetKey = 'g';
+            needsShift = false;
+        }
+    } 
+    else if (cleanChar === 'অ') {
+        targetKey = 'f'; 
+        needsShift = true;
+    } 
+    else if (cleanChar === 'ও') {
+        targetKey = 'x'; 
+        needsShift = false;
+    } 
+    else {
+        // সাধারণ ম্যাপ চেক
+        for (let k in BIJOY_MAP) {
+            if (BIJOY_MAP[k] === cleanChar) { targetKey = k; break; }
+        }
+        if (!targetKey) {
+            for (let k in BIJOY_SHIFT_MAP) {
+                if (BIJOY_SHIFT_MAP[k] === cleanChar) { targetKey = k; needsShift = true; break; }
+            }
+        }
+        
+        // ৫. স্পেশাল ক্যারেক্টার ওভাররাইড
+        if (cleanChar === 'ড়') { targetKey = 'p'; needsShift = false; }
+        else if (cleanChar === 'ঢ়') { targetKey = 'p'; needsShift = true; }
+        else if (cleanChar === 'য়') { targetKey = 'w'; needsShift = true; }
+        else if (cleanChar === 'ৎ') { targetKey = '\\'; needsShift = false; }
+        else if (cleanChar === 'ং') { targetKey = 'q'; needsShift = true; }
+        else if (cleanChar === 'ঃ') { targetKey = '\\'; needsShift = true; }
+        else if (cleanChar === 'ঁ') { targetKey = '7'; needsShift = true; } // Shift + 7
+    }
+
+    // ৬. কিবোর্ডে হাইলাইট করা
+    if (targetKey) {
+        let keyEl = document.getElementById('key-' + targetKey);
+        if (keyEl) {
+            keyEl.classList.add('next-guide');
+            if (needsShift) {
+                document.getElementById('key-shift')?.classList.add('shift-guide');
+            }
+        }
+    }
+}
+
+
+
+
+
+// render + smooth scroll
+function render(input) {
+    let html = "";
+    let correct = 0;
+    let extra = 0;
+    let missing = 0;
+
+    let inputArr = splitGraphemes(input);
+    let targetArr = splitGraphemes(target);
+
+    const maxLength = Math.max(inputArr.length, targetArr.length);
+
+    for (let i = 0; i < maxLength; i++) {
+        let tChar = targetArr[i] || ""; 
+        let iChar = inputArr[i] || ""; 
+        
+        if (i < targetArr.length) {
+            if (i < inputArr.length) {
+                if (iChar === tChar) {
+                    html += `<span class="correct">${tChar}</span>`;
+                    if (tChar !== " ") {
+			correct++;
+                } 
+		}else {
+                    html += `<span class="wrong">${tChar}</span>`;
+                 } 
+            } else if (i === inputArr.length) {
+                html += `<span class="current">${tChar}</span>`;
+            } else {
+                html += tChar;
+            }
+        } else {
+            if (i < inputArr.length) {
+                extra++;
+            }
+        }
+    }
+
+    let totalMistakes = permanentMistakeCount + extra + missing;
+	
+    document.getElementById("textInner").innerHTML = html;
+    document.getElementById("mistakeCount").innerText = totalMistakes;   // mistakes ভেরিয়েবলটি 
+    mistakes = totalMistakes;
+    document.getElementById("correctKeyCount").innerText = correct;   // correct ভেরিয়েবলটি 
+    correctKeyCount = correct; // গ্লোবাল ভেরিয়েবলে সেভ রাখা
+
+  // auto scroll
+let current = document.querySelector(".current");
+let container = document.querySelector(".text-display");
+
+if(current){
+  let currentRect = current.getBoundingClientRect();
+  let containerRect = container.getBoundingClientRect();
+
+  // if current line goes below visible area
+  if(currentRect.bottom > containerRect.bottom - 20){
+    let scrollAmount = currentRect.bottom - containerRect.bottom + 20;
+    container.scrollTop += scrollAmount;
+    container.scrollBy({ top: scrollAmount, behavior: "smooth" });
+  }
+
+// --- গাইড আপডেট ---
+    if (!testEnded && targetArr.length > inputArr.length) {
+        let nextChar = targetArr[inputArr.length];
+        highlightNextKey(nextChar);
+    } else {
+        highlightNextKey(null); // শেষ হলে মুছে ফেলবে
+    }
+}    // <-- এটি তোমার render ফাংশনের শেষ ব্র্যাকেট
+
+// --- রেজাল্ট আপডেট অংশ ---
+    
+    // ১. Accuracy আপডেট (correct ভেরিয়েবল ব্যবহার করে)
+    let totalAttempts = correct + mistakes;
+let accuracy = totalAttempts > 0 ? Math.round((correct / totalAttempts) * 100) : 100;
+let accElement = document.getElementById("accuracy");
+    accElement.innerText = accuracy;
+    
+    // ৯২% এর নিচে হলে লাল, না হলে সবুজ
+    if (accuracy < 95) {
+        accElement.style.color = "#ef4444"; // লাল
+    } else {
+        accElement.style.color = "#10b981"; // সবুজ
+    }
+
+
+
+// ২. WPM আপডেট (Net WPM প্রফেশনাল রুলস)
+    let timeElapsed = startTime ? (Date.now() - startTime) / 1000 : 0;
+    let wpmValue = 0;
+    
+    if (timeElapsed > 0) {
+        let minutes = timeElapsed / 60;
+        let grossWPM = (inputArr.length / 5) / minutes; 
+
+        // ঠিক না করা ভুলের হিসাব বের করা (লুপের বাইরে থেকে)
+        let uncorrectedErrors = 0;
+        for (let j = 0; j < inputArr.length; j++) {
+            if (inputArr[j] !== targetArr[j]) {
+                uncorrectedErrors++;
+            }
+        }
+
+        // মোট স্পিড থেকে ভুলের পেনাল্টি বাদ দেওয়া
+        let netWPM = grossWPM - (uncorrectedErrors / minutes);
+        
+        // স্পিড যেন মাইনাস (Negative) না হয়ে যায়, তাই Math.max(0) ব্যবহার করা হয়েছে
+        wpmValue = Math.round(Math.max(0, netWPM)); 
+    }
+    
+    document.getElementById("wpm").innerText = isFinite(wpmValue) ? wpmValue : 0;
+
+    // ৩. Progress Bar আপডেট
+    let progress = targetArr.length > 0 ? Math.min((inputArr.length / targetArr.length) * 100, 100) : 0;
+    document.getElementById("progressBar").style.width = progress + "%";
+}
+
+
+// সেভ করা রেজাল্ট স্ক্রিনে দেখানোর আপডেট ফাংশন
+function showLastSession() {
+    const data = localStorage.getItem("bijoy_last_result");
+    const lastSessionDiv = document.getElementById("lastSession");
+    
+    if (data && lastSessionDiv) {
+        const last = JSON.parse(data);
+        lastSessionDiv.style.display = "flex"; // লুক আপডেট: flex ব্যবহার করা হয়েছে
+        
+        // এনিমেশন সহ ভ্যালু সেট করা
+        document.getElementById("lastWpm").innerText = last.wpm || 0;
+        let lastAccEl = document.getElementById("lastAcc");    // মডালেও ৯২% এর নিচে লাল দেখাবে
+        let accVal = parseInt(last.acc || 0);
+        lastAccEl.innerText = accVal;
+        if (accVal < 95) { lastAccEl.style.color = "#ef4444"; // লাল
+        } else { lastAccEl.style.color = "#10b981"; }   // সবুজ
+       
+        document.getElementById("lastMistake").innerText = last.mistake || 0;
+        document.getElementById("lastKeys").innerText = last.keys || 0;
+	document.getElementById("lastTime").innerText = last.time || "00:00";
+ } else if (lastSessionDiv) {
+        lastSessionDiv.style.display = "none";
+    }
+}
+
+// সেভ করার ফাংশনটিও আপডেট করা হলো যাতে সঠিক কী কাউন্ট ঠিক থাকে
+function saveSessionResult() {
+    const result = {
+        wpm: document.getElementById("wpm").innerText,
+        acc: document.getElementById("accuracy").innerText,
+        mistake: document.getElementById("mistakeCount").innerText,
+        keys: correctKeyCount,
+        time: document.getElementById("modalTime").innerText
+ };
+    localStorage.setItem("bijoy_last_result", JSON.stringify(result));
+
+	// নির্দিষ্ট লেসনের রেজাল্ট সেভ করা
+    if (currentLessonTitle) {
+        let allResults = JSON.parse(localStorage.getItem("bijoy_lesson_results") || "{}");
+        allResults[currentLessonTitle] = { wpm: result.wpm, acc: result.acc };
+        localStorage.setItem("bijoy_lesson_results", JSON.stringify(allResults));
+
+        // পেজ রিলোড না করেই সাইডবারে আপডেট করা
+        let safeTitleId = currentLessonTitle.replace(/\s+/g, '');
+        let statSpan = document.getElementById(`stat-${safeTitleId}`);
+        if (statSpan) {
+	   let accColor = parseInt(result.acc) < 95 ? "#ef4444" : "#10b981";
+           statSpan.innerHTML = `<span style="font-size:14px; display:inline-flex; align-items:center; gap:6px; background:#1f2937; padding:2px 6px; border-radius:4px; border:1px solid #3a3f4b; margin-left:5px;">
+                <span style="color:#818cf8;"> ${result.wpm} WPM</span> <br>
+                <span style="color:${accColor};"> ${result.acc}% </span>
+            </span>`;
+        }
+    }
+updateCategoryCounters();
+
+}
+
+</script>
 </body>
 </html>
